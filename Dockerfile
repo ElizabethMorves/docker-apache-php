@@ -33,6 +33,7 @@ RUN apt -y update && apt upgrade -y \
     redis \
     imagick \
     timezonedb \
+    oauth \
  && docker-php-ext-configure intl \
  && docker-php-ext-configure gd \
         --with-freetype \
