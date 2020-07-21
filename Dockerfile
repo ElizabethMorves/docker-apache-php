@@ -1,4 +1,4 @@
-FROM debian:jessie
+FROM debian:buster
 
 MAINTAINER keopx <keopx@keopx.net>
 
@@ -6,31 +6,29 @@ MAINTAINER keopx <keopx@keopx.net>
 # Step 1: Installation
 #
 
-# Set frontend. We'll clean this later on!
-ENV DEBIAN_FRONTEND noninteractive
-
-# Locale
-ENV LOCALE es_ES.UTF-8
-
-# PHP Timezone
-ENV TZ=Europe/Madrid
+# System environments
+ENV DEBIAN_FRONTEND="noninteractive" \
+    LOCALE="es_ES.UTF-8" \
+    GOTPL_VER="0.1.5" \
+    DEFAULT_ROOT="/var/www/html" \
+    UID="1000" \
+    GID="1000" \
+    UNAME="keopx"
 
 # Set repositories
 RUN \
-  echo "deb http://ftp.de.debian.org/debian/ jessie main non-free contrib\n" > /etc/apt/sources.list && \
-  echo "deb-src http://ftp.de.debian.org/debian/ jessie main non-free contrib\n" >> /etc/apt/sources.list && \
-  echo "deb http://security.debian.org/ jessie/updates main contrib non-free\n" >> /etc/apt/sources.list && \
-  echo "deb-src http://security.debian.org/ jessie/updates main contrib non-free" >> /etc/apt/sources.list && \
-  # Update repositories cache and distribution
-  apt-get -qq update && apt-get -qqy upgrade
-
+  echo "deb http://ftp.de.debian.org/debian/ buster main non-free contrib" > /etc/apt/sources.list && \
+  echo "deb-src http://ftp.de.debian.org/debian/ buster main non-free contrib" >> /etc/apt/sources.list && \
+  echo "deb http://security.debian.org/ buster/updates main contrib non-free" >> /etc/apt/sources.list && \
+  echo "deb-src http://security.debian.org/ buster/updates main contrib non-free" >> /etc/apt/sources.list && \
+  apt-get -qq update && apt-get -qqy upgrade && \
 # Install some basic tools needed for deployment
-RUN apt-get -yqq install \
+  apt-get -yqq install \
   apt-utils \
   build-essential \
   debconf-utils \
   debconf \
-  mysql-client \
+  default-mysql-client \
   locales \
   curl \
   wget \
@@ -38,65 +36,86 @@ RUN apt-get -yqq install \
   patch \
   rsync \
   vim \
+  nano \
   openssh-client \
   git \
   bash-completion \
-  libssh2-php \
-  locales
-
+  locales \
+  libjpeg-turbo-progs libjpeg-progs \
+  pngcrush optipng && \
 # Install locale
-RUN \
   sed -i -e "s/# $LOCALE/$LOCALE/" /etc/locale.gen && \
   echo "LANG=$LOCALE">/etc/default/locale && \
   dpkg-reconfigure --frontend=noninteractive locales && \
-  update-locale LANG=$LOCALE
-
-# Install PHP5.6 with Xdebug (dev environment).
-RUN apt-get -yqq install \
-  php5			\
-  php5-curl 		\
-  php5-dev 		\
-  php5-gd 		\
-  php5-intl 		\
-  php5-json 		\
-  php5-mcrypt		\
-  php5-mysql		\
-  php5-twig		\
-  php5-ssh2		\
-  php5-apcu		\
-  php5-memcache 	\
-  php5-memcached 	\
-  php5-redis		\
-  php5-xdebug		\
-  php5-xhprof		\
-  libapache2-mod-php5
-
-# PHP Timezone
-RUN \
-  echo $TZ | tee /etc/timezone && \
-  dpkg-reconfigure --frontend noninteractive tzdata && \
-  echo "date.timezone = \"$TZ\";" > /etc/php5/apache2/conf.d/timezone.ini && \
-  echo "date.timezone = \"$TZ\";" > /etc/php5/cli/conf.d/timezone.ini
-
+  update-locale LANG=$LOCALE && \
+# GOTPL
+  gotpl_url="https://github.com/wodby/gotpl/releases/download/${GOTPL_VER}/gotpl-linux-amd64-${GOTPL_VER}.tar.gz"; \
+  wget -qO- "${gotpl_url}" | tar xz -C /usr/local/bin; \
+# Configure Sury sources
+# @see https://www.noobunbox.net/serveur/auto-hebergement/installer-php-7-1-sous-debian-et-ubuntu
+  apt-get -yqq install apt-transport-https lsb-release ca-certificates && \
+  wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg && \
+  echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/php.list && \
+# Install PHP5.6 with Xdebug (dev environment). WARNING with install php5.6-apcu.
+  apt-get -qq update && \
+  apt-get -yqq install --no-install-recommends \
+  php5.6 		\
+  php5.6-bcmath   \
+  php5.6-bz2   \
+  php5.6-curl 		\
+  php5.6-dev 		\
+  php5.6-gd 		\
+  php5.6-dom		\
+  php5.6-imap     \
+  php5.6-imagick  \
+  php5.6-intl 		\
+  php5.6-json 		\
+  php5.6-ldap 		\
+  php5.6-mbstring	\
+  php5.6-mcrypt 	\
+  php5.6-mysql		\
+  php5.6-oauth    \
+  php5.6-odbc     \
+  php5.6-uploadprogress \
+  php5.6-ssh2		\
+  php5.6-xml		\
+  php5.6-yaml		\
+  php5.6-zip		\
+  php5.6-solr		\
+  php5.6-apcu		\
+  php5.6-opcache	\
+  php5.6-redis		\
+  php5.6-memcache 	\
+  php5.6-memcached 	\
+  php5.6-xdebug		\
+  libapache2-mod-php5.6 && \
+# Install manually xhprof
+# RUN \
+#   pecl install xhprof-beta && \
+#   echo "extension=xhprof.so" > /etc/php/5.6/mods-available/xhprof.ini && \
+#   echo "xhprof.output_dir=/var/www/xhprof" >> /etc/php/5.6/mods-available/xhprof.ini
+# Install manually APC
+  echo "extension=apcu.so" > /etc/php/5.6/mods-available/apcu_bc.ini && \
+  echo "extension=apc.so" >> /etc/php/5.6/mods-available/apcu_bc.ini && \
 # Install SMTP.
-RUN apt-get install -y ssmtp && \
-  echo "FromLineOverride=YES" >> /etc/ssmtp/ssmtp.conf
-
+  apt-get -yqq install libgnutls-openssl27 && \
+  wget ftp.de.debian.org/debian/pool/main/s/ssmtp/ssmtp_2.64-8+b2_amd64.deb && \
+  dpkg -i ssmtp_2.64-8+b2_amd64.deb && rm ssmtp_2.64-8+b2_amd64.deb && \
 # Install Apache web server.
-RUN apt-get -yqq install apache2-mpm-prefork
-
+  apt-get -yqq install apache2 && \
 #
 # Step 2: Configuration
 #
-
-# Disable by default apcu, xdebug and xhprof. Use docker-compose.yml to add file.
-RUN php5dismod apcu xdebug xhprof
-
+# Enable uploadprogress, imagick, redis and solr.
+  phpenmod uploadprogress imagick redis solr && \
+# Disable by default apcu, apcu_bc, opcache, xdebug and xhprof. Use docker-compose.yml to add file.
+  phpdismod apcu apcu_bc opcache xdebug && \
 # Remove all sites enabled
-RUN rm /etc/apache2/sites-enabled/*
-
+# RUN rm /etc/apache2/sites-enabled/*
 # Configure needed apache modules and disable default site
-RUN a2enmod		\
+# mpm_worker enabled.
+  a2dismod mpm_event cgi && \
+  a2enmod		\
   access_compat		\
   actions		\
   alias			\
@@ -115,65 +134,53 @@ RUN a2enmod		\
   headers		\
   mime 			\
   negotiation 		\
-  php5	 		\
+  php5.6 		\
   mpm_prefork 		\
   reqtimeout 		\
   rewrite 		\
   setenvif 		\
   status 		\
-  ssl			\
-  && a2dismod cgi
-
-# Install composer (latest version)
-RUN curl -sS https://getcomposer.org/installer | php && \
+  ssl && \
+# without the following line we get "AH00558: apache2: Could not reliably determine the server's fully qualified domain name"
+# autorise .htaccess files
+  sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf && \
+# Install composer (latest version) | prestissimo to speed up composer
+  curl -sS https://getcomposer.org/installer | php && \
   mv composer.phar /usr/local/bin/composer && \
-  # prestissimo to speed up composer
-  composer global require "hirak/prestissimo:^0.3"
-
+  composer global require "hirak/prestissimo:^0.3" && \
 ### Install DRUSH (latest stable) ###
-# Create and/or navigate to a path for the single Composer Drush install.
-RUN mkdir --parents /opt/drush-7.x && cd /opt/drush-7.x && \
-  # Initialise a new Composer project that requires Drush.
-  composer init --require=drush/drush:7.* -n && \
-  # Configure the path Composer should use for the Drush vendor binaries.
-  composer config bin-dir /usr/local/bin && \
-  # Install Drush.
-  composer install && \
-  # Drush vitamin.
-  # See: https://www.drupal.org/project/registry_rebuild.
-  drush dl registry_rebuild && \
-  # See: https://www.drupal.org/project/updatepath.
-  drush dl --destination=$HOME/.drush updatepath -y && drush cache-clear drush
-
+# Run this in your terminal to get the latest DRUSH project version:
+  composer global require drush/drush && \
+  ~/.composer/vendor/bin/drush init -y && \
+  curl -OL https://github.com/drush-ops/drush-launcher/releases/download/0.6.0/drush.phar && \
+  mv drush.phar /usr/local/bin/drush && \
+  chmod +x /usr/local/bin/drush && \
+### Install DRUPAL CONSOLE (latest version) ###
+# Run this in your terminal to get the latest project version:
+  curl https://drupalconsole.com/installer -L -o drupal.phar && \
+  mv drupal.phar /usr/local/bin/drupal && \
+  chmod +x /usr/local/bin/drupal  && \
+  drupal self-update && \
 # Bash setup.
-RUN echo ". /usr/share/bash-completion/bash_completion" >> ~/.bashrc && \
-  echo ". /vendor/drush/drush/drush.complete.sh" >> ~/.bashrc && \
-  echo "alias ll='ls -lahs'" >> ~/.bashrc && \
-  rm /usr/local/bin/drush.bat /usr/local/bin/drush.complete.sh /usr/local/bin/drush.php
-
+  echo ". /usr/share/bash-completion/bash_completion" >> ~/.bashrc && echo "alias ll='ls -lahs'" >> ~/.bashrc && \
 #
 # Step 3: Clean the system
 #
-
 # Cleanup some things.
-RUN apt-get -q autoclean && \
-  rm -rf /var/lib/apt/lists/*
-
+  apt-get -q autoclean && \
+  rm -rf /var/lib/apt/lists/* && \
 #
 # Step 4: Run
 #
-
-# Create 'me' user like local machime user.
-RUN useradd me && usermod -G www-data -a me
-
+# Create 'keopx' user like local machime user.
+  groupadd -g $UID $GID ; \
+  useradd -m -u $UID -g $GID -s /bin/bash $UNAME ; \
+  usermod -aG www-data $UNAME; \
+  echo ". /usr/share/bash-completion/bash_completion" >> ~/.bashrc && echo "alias ll='ls -lahs'" >> /home/$UNAME/.bashrc
 # Working dir
-WORKDIR /var/www
-
-# Volume for Apache2 data
-VOLUME /var/www
-
+WORKDIR ${DEFAULT_ROOT}
+# Configure templates
+COPY templates /etc/gotpl/
 COPY scripts/apache2-foreground /usr/bin/
-
 EXPOSE 80 443
-
 CMD ["apache2-foreground"]
