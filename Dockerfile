@@ -52,6 +52,7 @@ RUN apt -y update && apt upgrade -y \
     redis \
     imagick \
     timezonedb \
+    oauth \
  && echo "<?php \n\n phpinfo();" > $DEFAULT_ROOT/index.php \
  && mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
  && rm -rf /var/lib/apt/lists/*
