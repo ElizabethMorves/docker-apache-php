@@ -12,7 +12,7 @@ sudo -u Uzhor docker run -d --restart=unless-stopped \
 -v ${pwd}/php.ini:/usr/local/etc/php/php.ini:ro \
 -v ${pwd}/www/:/var/www/html \
 -e "VIRTUAL_HOST=example, www.example" \
-elizabethmorves/docker-apache-php7
+elizabethmorves/docker-apache-php
 ```
 
 The docker container is started with the -d flag so it will run inte the background. To run commands or edit settings inside
@@ -28,7 +28,7 @@ docker logs -f example
  Edit Dockerfile and run rebuild
  
  ```
- docker build -t elizabethmorves/docker-apache-php7 .
+ docker build -t elizabethmorves/docker-apache-php .
  ```
 
 ### use jwilder/nginx-proxy
