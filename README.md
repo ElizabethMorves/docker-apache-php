@@ -12,7 +12,7 @@ sudo -u Uzhor docker run -d --restart=unless-stopped \
 -v ${pwd}/php.ini:/usr/local/etc/php/php.ini:ro \
 -v ${pwd}/www/:/var/www/html \
 -e "VIRTUAL_HOST=example, www.example" \
-elizabethmorves/docker-apache-php:latest
+elizabethmorves/apache-php:latest
 ```
 
 The docker container is started with the -d flag so it will run inte the background. To run commands or edit settings inside
@@ -23,13 +23,6 @@ docker exec -ti example php -m | grep curl
 docker exec -ti example php -i | grep curl
 docker logs -f example
 ```
- 
- ### add other php extension
- Edit Dockerfile and run rebuild
- 
- ```
- docker build -t elizabethmorves/docker-apache-php .
- ```
 
 ### use jwilder/nginx-proxy
 It can be fine tuned in ./conf-enablable/remoteip.conf.
