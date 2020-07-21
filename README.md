@@ -12,7 +12,7 @@ sudo -u Uzhor docker run -d --restart=unless-stopped \
 -v ${pwd}/php.ini:/usr/local/etc/php/php.ini:ro \
 -v ${pwd}/www/:/var/www/html \
 -e "VIRTUAL_HOST=example, www.example" \
-elizabethmorves/docker-apache-php
+elizabethmorves/docker-apache-php:latest
 ```
 
 The docker container is started with the -d flag so it will run inte the background. To run commands or edit settings inside
