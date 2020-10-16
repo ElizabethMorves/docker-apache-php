@@ -1,4 +1,4 @@
-## Apache2 with php7.4.8
+## Apache2 with php7.4.11
 xdebug, mcrypt, opcache, redis, gd, mysqli, intl and other (default)
 
 ### Examples
