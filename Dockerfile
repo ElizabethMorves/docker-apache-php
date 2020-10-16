@@ -1,4 +1,4 @@
-FROM php:7.4.8-apache
+FROM php:7.4.11-apache
 
  MAINTAINER Uzh0r <Elizabeth.Morves@gmail.com>
  ENV DEBIAN_FRONTEND noninteractive
